@@ -11,11 +11,11 @@ namespace Tymski.Clipboard
     {
         const string WINDOW_KEY = "Tools/Tymski/Clipboard";
         public int historyLimit = 20;
-        public string search;
+        public string search = "";
 
         [ShowIf("@search.Length > 0")]
         public List<UnityEngine.Object> searchList = new List<UnityEngine.Object>();
-        public List<ItemList> selectionHistoryByType;
+        public List<ItemList> selectionHistoryByType = new List<ItemList>();
         public List<UnityEngine.Object> selectionHistory = new List<UnityEngine.Object>();
 
         [MenuItem(WINDOW_KEY)]
@@ -27,8 +27,8 @@ namespace Tymski.Clipboard
         protected override void OnEnable()
         {
             base.OnEnable();
-            var data = EditorPrefs.GetString(WINDOW_KEY, JsonUtility.ToJson(this, false));
-            JsonUtility.FromJsonOverwrite(data, this);
+            // var data = EditorPrefs.GetString(WINDOW_KEY, JsonUtility.ToJson(this, false));
+            // JsonUtility.FromJsonOverwrite(data, this);
         }
 
         void OnSelectionChange()
@@ -93,11 +93,11 @@ namespace Tymski.Clipboard
             list.RemoveAll(item => item.ToString() == "null");
         }
 
-        void OnDisable()
-        {
-            var data = JsonUtility.ToJson(this, false);
-            EditorPrefs.SetString(WINDOW_KEY, data);
-        }
+        // void OnDisable()
+        // {
+        //     var data = JsonUtility.ToJson(this, false);
+        //     EditorPrefs.SetString(WINDOW_KEY, data);
+        // }
     }
 
     [Serializable, InlineEditor]

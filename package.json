@@ -1,8 +1,8 @@
 {
     "name": "com.tymski.clipboard",
     "displayName": "Clipboard",
-    "description": "Simple Unity tool for accessing frequently used items and selection history. Available at Tools/Tymski/Clipboard",
-    "version": "0.0.1",
+    "description": "Simple Unity tool for accessing frequently used items and selection history. Tools/Tymski/Clipboard",
+    "version": "0.0.2",
     "unity": "2017.1",
     "repository": {
         "type": "git",
