@@ -70,6 +70,7 @@ namespace Tymski.Clipboard
         private void OnValidate()
         {
             searchList = new List<UnityEngine.Object>();
+            if (selectionHistory == null) return;
             for (int i = selectionHistory.Count - 1; i >= 0; i--)
             {
                 UnityEngine.Object obj = selectionHistory[i];
