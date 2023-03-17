@@ -3,20 +3,20 @@ using Sirenix.OdinInspector.Editor;
 using System;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
 namespace Tymski.Clipboard
 {
     public class Clipboard : OdinEditorWindow
     {
         const string WINDOW_KEY = "Tools/Tymski/Clipboard";
-        public int historyLimit = 20;
-        public string search = "";
+        int historyLimit = 30;
 
-        [ShowIf("@search.Length > 0")]
-        public List<UnityEngine.Object> searchList = new List<UnityEngine.Object>();
-        public List<ItemList> selectionHistoryByType = new List<ItemList>();
-        public List<UnityEngine.Object> selectionHistory = new List<UnityEngine.Object>();
+        public List<ItemList> selectionHistoryByType = new();
+        public List<Object> selectionHistory = new();
 
         [MenuItem(WINDOW_KEY)]
         static void OpenWindow()
@@ -26,59 +26,62 @@ namespace Tymski.Clipboard
 
         protected override void OnEnable()
         {
-            base.OnEnable();
-            // var data = EditorPrefs.GetString(WINDOW_KEY, JsonUtility.ToJson(this, false));
-            // JsonUtility.FromJsonOverwrite(data, this);
+            EditorSceneManager.sceneOpened += OnSceneOpened;
+            PrefabStage.prefabStageOpened += OnPrefabStageOpened;
+        }
+
+        private void OnDisable()
+        {
+            EditorSceneManager.sceneOpened -= OnSceneOpened;
+            PrefabStage.prefabStageOpened -= OnPrefabStageOpened;
+        }
+
+        private void OnPrefabStageOpened(PrefabStage prefabStage)
+        {
+            AddToHistory(AssetDatabase.LoadAssetAtPath(prefabStage.assetPath, typeof(Object)));
+        }
+
+        private void OnSceneOpened(Scene scene, OpenSceneMode mode)
+        {
+            AddToHistory(AssetDatabase.LoadAssetAtPath(scene.path, typeof(Object)));
         }
 
         void OnSelectionChange()
         {
             if (Selection.activeObject == null) return;
-
-            historyLimit *= 4;
-            Add(selectionHistory, Selection.activeObject);
-            historyLimit /= 4;
-
-            string selectionType = Selection.activeObject.GetType().ToString();
-
-            bool contains = false;
-            foreach (ItemList item in selectionHistoryByType)
-            {
-                if (item.listName == selectionType) contains = true;
-            }
-            if (!contains)
-            {
-                selectionHistoryByType.Add(new ItemList(selectionType));
-            }
-
-            foreach (ItemList item in selectionHistoryByType)
-            {
-                if (item.listName != selectionType) continue;
-
-                if (selectionType == "UnityEngine.GameObject" && Selection.activeGameObject.scene.path != null)
-                {
-                    if (PrefabUtility.GetOutermostPrefabInstanceRoot(Selection.activeGameObject) != null)
-                        if (PrefabUtility.GetCorrespondingObjectFromSource(PrefabUtility.GetOutermostPrefabInstanceRoot(Selection.activeGameObject)) != null)
-                            Add(item.objects, PrefabUtility.GetCorrespondingObjectFromSource(PrefabUtility.GetOutermostPrefabInstanceRoot(Selection.activeGameObject)));
-                    continue;
-                }
-
-                Add(item.objects, Selection.activeObject);
-            }
+            AddToHistory(Selection.activeObject);
         }
 
-        private void OnValidate()
+        void AddToHistory(Object @object)
         {
-            searchList = new List<UnityEngine.Object>();
-            if (selectionHistory == null) return;
-            for (int i = selectionHistory.Count - 1; i >= 0; i--)
+            historyLimit *= 4;
+            Add(selectionHistory, @object);
+            historyLimit /= 4;
+
+            string selectionType = @object.GetType().ToString();
+
+            ItemList itemList = selectionHistoryByType.Find(itemList => itemList.name == selectionType);
+            if (itemList == null)
             {
-                UnityEngine.Object obj = selectionHistory[i];
-                if (obj.name.ToLower().Contains(search.ToLower()))
-                {
-                    Add(searchList, selectionHistory[i]);
-                }
+                itemList = new ItemList(selectionType);
+                selectionHistoryByType.Add(itemList);
             }
+
+            if (selectionType == "UnityEngine.GameObject" && (@object as GameObject).scene.path != null)
+            {
+                GameObject outermostPrefabInstanceRoot = PrefabUtility.GetOutermostPrefabInstanceRoot(@object as GameObject);
+                if (outermostPrefabInstanceRoot != null)
+                {
+                    GameObject prefabSourceRoot = PrefabUtility.GetCorrespondingObjectFromSource(outermostPrefabInstanceRoot);
+                    if (prefabSourceRoot != null)
+                    {
+                        Add(itemList.objects, prefabSourceRoot);
+                    }
+                }
+                return;
+            }
+
+            Add(itemList.objects, @object);
         }
 
         void Add<T>(List<T> list, T obj)
@@ -93,26 +96,26 @@ namespace Tymski.Clipboard
         {
             list.RemoveAll(item => item.ToString() == "null");
         }
-
-        // void OnDisable()
-        // {
-        //     var data = JsonUtility.ToJson(this, false);
-        //     EditorPrefs.SetString(WINDOW_KEY, data);
-        // }
     }
 
     [Serializable, InlineEditor]
     public class ItemList
     {
-        [HideLabel] public string listName;
-        public List<UnityEngine.Object> objects;
+        [HideLabel] public string name;
+        public List<Object> objects;
 
         public ItemList(string name)
         {
-            listName = name;
-            objects = new List<UnityEngine.Object>();
+            this.name = name;
+            objects = new List<Object>();
         }
 
         public ItemList() { }
+    }
+
+    public class Entry
+    {
+        public string path;
+        public Object @object;
     }
 }
